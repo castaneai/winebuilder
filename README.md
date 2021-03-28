@@ -2,8 +2,9 @@
 ## Building Wine
 
 ```bash
-docker-compose build
-docker-compose run builder bash
+make build
+make up
+make bash
 
 CC='ccache gcc' PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig ./configure
 make -j16 # 16: the number of processors
@@ -12,17 +13,22 @@ make -j16 # 16: the number of processors
 ## Using winetricks
 
 ```bash
-export PATH=$PATH:/wine
+make bash
+
 winetricks ...
 ```
 
 ## Debugging 
 
+### Using VNC
+
+vnc://localhost:5900
+
 ### Using winedbg
 
-```
-docker-compose up -d xserver
-docker-compose run builder bash
+```bash
+make up
+make bash
 
 ./wine ./programs/winedbg/winedbg.exe.so
 ```
