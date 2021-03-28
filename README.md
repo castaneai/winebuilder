@@ -9,6 +9,13 @@ CC='ccache gcc' PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig ./configure
 make -j16 # 16: the number of processors
 ```
 
+## Using winetricks
+
+```bash
+export PATH=$PATH:/wine
+winetricks ...
+```
+
 ## Debugging 
 
 ### Using winedbg

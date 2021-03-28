@@ -3,11 +3,13 @@ services:
 
   builder:
     build: .
+    command: tail -f /dev/null
     volumes:
       - ./wine:/wine
       - x11socket:/tmp/.X11-unix/
     environment: 
       DISPLAY: ":0"
+      PULSE_SERVER: pulseaudio:4713
       WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
       LANG: ja_JP.UTF-8
       TZ: Asia/Tokyo
@@ -20,6 +22,9 @@ services:
       - 5900:5900
     volumes: 
       - x11socket:/tmp/.X11-unix/
+  
+  pulseaudio:
+    build: ./pulseaudio
 
 volumes:
   x11socket:
