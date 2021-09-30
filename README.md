@@ -28,7 +28,7 @@ winetricks ...
 
 ### Using VNC
 
-vnc://localhost:5900
+vnc://localhost:5901
 
 ### Using pulseaudio on host machine
 
