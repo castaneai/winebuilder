@@ -1,10 +1,12 @@
+# winebuilder
+
+🍷 Wine build environment with Docker
 
 ## Building Wine
 
 ```bash
 # Make wine-source up-to-date
-cd ./wine
-git pull origin master
+git submodule update --init  # or cd ./wine git pull origin master
 
 # Build wine
 cd ../
@@ -50,6 +52,28 @@ Change the PulseAudio address (`PULSE_SERVER`) to that of the host machine.
 -      PULSE_SERVER: pulseaudio:4713
 +      PULSE_SERVER: host.docker.internal:4713
        WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
+```
+
+### Using WSLg
+
+[WSLg](https://github.com/microsoft/wslg) enables Wine apps with audio in WSL2 on Windows 11.
+Change the `PULSE_SERVER` as follows:
+
+```diff
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -7,9 +7,10 @@ services:
+     volumes:
+       - ./wine:/wine
+       - x11socket:/tmp/.X11-unix/
++      - /mnt/wslg:/mnt/wslg
+     environment:
+       DISPLAY: ":0"
+-      PULSE_SERVER: pulseaudio:4713
++      PULSE_SERVER: /mnt/wslg/PulseServer
+       WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
+       LANG: ja_JP.UTF-8
+       TZ: Asia/Tokyo
 ```
 
 ### Using winedbg
