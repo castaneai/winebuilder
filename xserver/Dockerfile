@@ -1,7 +1,7 @@
-FROM ubuntu:21.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt update -y && apt install -y \
+RUN apt-get update -y && apt-get install -y \
         x11-xserver-utils \
         xserver-xorg-video-dummy \
         x11vnc \
@@ -10,7 +10,7 @@ RUN apt update -y && apt install -y \
         pciutils && \
     rm -rf /var/lib/apt/lists/
 
-RUN apt remove -y libnss-systemd
+RUN apt-get remove -y libnss-systemd
 
 ENV DISPLAY :0
 

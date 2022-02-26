@@ -1,0 +1,7 @@
+.git*
+/wine
+/pulseaudio
+/xserver
+README.md
+Makefile
+docker-compose.yml
