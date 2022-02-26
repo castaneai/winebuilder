@@ -6,24 +6,21 @@
 
 ```bash
 # Make wine-source up-to-date
-git submodule update --init  # or cd ./wine git pull origin master
-
-# Build wine
-cd ../
-make build
+git submodule update --init
+# Enter a builder
 make up
 make bash
 
-CC='ccache gcc' PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig ./configure
-make -j16 # 16: the number of processors
-```
+# Building 64-bit wine 
+cd /wine64-build
+/wine-source/configure --enable-win64
+make
 
-## Using winetricks
-
-```bash
-make bash
-
-winetricks ...
+# Building 32-bit wine
+cd /wine32-build
+PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
+/wine-source/configure --with-wine64=/wine64-build
+make
 ```
 
 ## Debugging 

@@ -1,5 +1,5 @@
 .git*
-/wine
+/wine-source
 /pulseaudio
 /xserver
 README.md

@@ -5,14 +5,19 @@ services:
     build: .
     command: tail -f /dev/null
     volumes:
-      - ./wine:/wine
+      - ./wine-source:/wine-source
       - x11socket:/tmp/.X11-unix/
+      - wine64-build:/wine64-build
+      - wine32-build:/wine32-build
+      - commandhistory:/commandhistory
     environment: 
       DISPLAY: ":0"
       PULSE_SERVER: host.docker.internal:4713
       WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
       LANG: ja_JP.UTF-8
       TZ: Asia/Tokyo
+      # https://code.visualstudio.com/remote/advancedcontainers/persist-bash-history
+      HISTFILE: /commandhistory/.bash_history
     # ref: https://github.com/osrf/docker_images/issues/21#issuecomment-239334515
     ipc: host
     extra_hosts:
@@ -30,6 +35,9 @@ services:
     build: ./pulseaudio
 
 volumes:
+  wine32-build:
+  wine64-build:
+  commandhistory:
   x11socket:
     driver: local
     driver_opts:
