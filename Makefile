@@ -1,13 +1,13 @@
-.PHONY: build up bash
+.PHONY: build up down bash
 
 build:
-	docker-compose build
+	docker compose build
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down -t 0
+	docker compose down -t 0
 
 bash:
-	docker-compose exec builder bash
+	docker compose exec builder bash

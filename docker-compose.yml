@@ -24,6 +24,7 @@ services:
       - 5901:5900
     volumes: 
       - x11socket:/tmp/.X11-unix/
+    ipc: host
   
   pulseaudio:
     build: ./pulseaudio
