@@ -6,12 +6,13 @@ services:
     command: tail -f /dev/null
     volumes:
       - ./wine-source:/wine-source
-      - x11socket:/tmp/.X11-unix/
+      - /tmp/.X11-unix:/tmp/.X11-unix
       - wine64-build:/wine64-build
       - wine32-build:/wine32-build
+      - wineprefix:/root/.wine
       - commandhistory:/commandhistory
     environment: 
-      DISPLAY: ":0"
+      DISPLAY: "${DISPLAY}"
       PULSE_SERVER: host.docker.internal:4713
       WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
       LANG: ja_JP.UTF-8
@@ -23,24 +24,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  xserver:
-    build: ./xserver
-    ports: 
-      - 5901:5900
-    volumes: 
-      - x11socket:/tmp/.X11-unix/
-    ipc: host
-  
-  pulseaudio:
-    build: ./pulseaudio
-
 volumes:
   wine32-build:
   wine64-build:
   commandhistory:
-  x11socket:
-    driver: local
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-      o: size=100m
+  wineprefix:

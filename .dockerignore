@@ -1,7 +1,5 @@
 .git*
 /wine-source
-/pulseaudio
-/xserver
 README.md
 Makefile
 docker-compose.yml
