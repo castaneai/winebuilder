@@ -1,14 +1,11 @@
-version: "3.6"
 services:
-
   builder:
     build: .
     command: tail -f /dev/null
     volumes:
       - ./wine-source:/wine-source
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - wine64-build:/wine64-build
-      - wine32-build:/wine32-build
+      - wine-build:/wine-build
       - wineprefix:/root/.wine
       - commandhistory:/commandhistory
     environment: 
@@ -25,7 +22,6 @@ services:
       - "host.docker.internal:host-gateway"
 
 volumes:
-  wine32-build:
-  wine64-build:
+  wine-build:
   commandhistory:
   wineprefix:

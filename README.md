@@ -11,16 +11,13 @@ git submodule update --init
 make up
 make bash
 
-# Building 64-bit wine 
-cd /wine64-build
-/wine-source/configure --enable-win64
+# Buildig wine with new WoW64 mode
+cd /wine-build
+/wine-source/configure --enable-archs=x86_64,i386
 make
-
-# Building 32-bit wine
-cd /wine32-build
-PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
-/wine-source/configure --with-wine64=/wine64-build
-make
+# Start wine
+./wine --version
+./wine notepad
 ```
 
 ## Tips
@@ -42,28 +39,22 @@ Change the `PULSE_SERVER` as follows:
 --- a/docker-compose.yml
 +++ b/docker-compose.yml
      volumes:
-       - ./wine:/wine
-       - /tmp/.X11-unix:/tmp/.X11-unix
 +      - /mnt/wslg:/mnt/wslg
      environment:
-       DISPLAY: ":0"
 -      PULSE_SERVER: host.docker.internal:4713
 +      PULSE_SERVER: /mnt/wslg/PulseServer
-       WINEDLLOVERRIDES: "mscoree=d;mshtml=d"
-       LANG: ja_JP.UTF-8
-       TZ: Asia/Tokyo
 ```
 
 ### winetricks
 
 ```bash
-cd /wine32-build
+cd /wine-build
 WINE=./wine winetricks ...
 ```
 
 ### winedbg
 
 ```bash
-cd /wine32-build
+cd /wine-build
 ./wine ./programs/winedbg/winedbg.exe
 ```
