@@ -22,9 +22,11 @@ RUN apt-get update -y \
     oss4-dev gettext
 
 RUN apt-get update -y \
-	&& apt-get install -y --no-install-recommends wget locales tzdata winetricks \
+	&& apt-get install -y --no-install-recommends wget locales tzdata \
 	&& apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+    && wget -O /usr/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
+    && chmod +x /usr/bin/winetricks
 RUN locale-gen ja_JP.UTF-8
 
 RUN apt-get update -y \
