@@ -6,6 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG TARGETARCH
 ARG LLVM_MINGW_VERSION=20260602
 
+# Build dependencies.
+# Not installed because Wine >= 11 bundles them in its source tree (libs/):
+#   faudio, gsm, jxr, lcms2, ldap, mpg123, vkd3d, xml2, xslt, jpeg, png, tiff
+# OSMesa and OpenAL support were removed from Wine itself.
 RUN apt-get update -y \
     && apt-get install -y \
     make gcc ccache flex bison pkg-config \
@@ -14,15 +18,13 @@ RUN apt-get update -y \
     libxcursor-dev libxi-dev libxext-dev \
     libxrandr-dev \
     libxcomposite-dev libgl-dev \
-    libosmesa6-dev libpcap-dev libdbus-1-dev libsane-dev \
+    libpcap-dev libdbus-1-dev libsane-dev \
     libusb-1.0-0-dev libv4l-dev libgphoto2-dev \
-    liblcms2-dev libpulse-dev libgstreamer-plugins-base1.0-dev \
-    libudev-dev libsdl2-dev libfaudio-dev \
+    libpulse-dev libgstreamer-plugins-base1.0-dev \
+    libudev-dev libsdl2-dev \
     libcapi20-dev libcups2-dev libfontconfig-dev \
-    libgsm1-dev libkrb5-dev libjxr-dev \
-    libmpg123-dev libvulkan-dev \
-    libvkd3d-dev libldap-dev \
-    libxml2-dev libxslt1-dev libgnutls28-dev \
+    libkrb5-dev libgnutls28-dev \
+    libvulkan-dev \
     gettext
 
 # Cross toolchains for PE modules

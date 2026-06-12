@@ -1,0 +1,149 @@
+name: Build Wine image
+
+on:
+  push:
+    tags:
+      - 'wine-*'
+  workflow_dispatch:
+    inputs:
+      wine_version:
+        description: 'Wine version (e.g. 11.10)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # 入力値を直接シェルへ展開せず env 経由で受けることでコマンドインジェクションを避ける
+      INPUT_WINE_VERSION: ${{ inputs.wine_version }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Resolve Wine version
+        id: wine
+        # tag push の場合は GITHUB_REF から "wine-11.10" → "11.10" を取り出す。
+        # workflow_dispatch の場合は inputs.wine_version を使う。
+        run: |
+          if [ -n "${INPUT_WINE_VERSION}" ]; then
+            echo "version=${INPUT_WINE_VERSION}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "version=${GITHUB_REF##*wine-}" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Prepare platform slug
+        run: |
+          platform="${{ matrix.platform }}"
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "${GITHUB_ENV}"
+      - uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # ccache ディレクトリを Actions cache に保存し、2回目以降のビルドを高速化する。
+      # BuildKit の cache mount (/root/.ccache) への注入は buildkit-cache-dance が行う。
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache
+          key: ccache-${{ env.PLATFORM_PAIR }}-${{ steps.wine.outputs.version }}
+          restore-keys: |
+            ccache-${{ env.PLATFORM_PAIR }}-
+      - name: Inject ccache into BuildKit
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          cache-map: |
+            {
+              "ccache": "/root/.ccache"
+            }
+          skip-extraction: ${{ steps.ccache.outputs.cache-hit }}
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.release
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            WINE_VERSION=${{ steps.wine.outputs.version }}
+          # レイヤーキャッシュは Actions cache の容量制限 (10GB) を避けて registry に保存する
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ env.PLATFORM_PAIR }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ env.PLATFORM_PAIR }},mode=max,image-manifest=true,oci-mediatypes=true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+      - name: Export digest
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    env:
+      INPUT_WINE_VERSION: ${{ inputs.wine_version }}
+    steps:
+      - name: Resolve Wine version
+        id: wine
+        run: |
+          if [ -n "${INPUT_WINE_VERSION}" ]; then
+            echo "version=${INPUT_WINE_VERSION}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "version=${GITHUB_REF##*wine-}" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create multi-arch manifest and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+          VERSION="${{ steps.wine.outputs.version }}"
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
+      - name: Inspect image
+        run: docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${{ steps.wine.outputs.version }}"
+      - name: Summary
+        run: |
+          {
+            echo 'Image URL'
+            echo '```'
+            echo "${REGISTRY}/${IMAGE_NAME}:${{ steps.wine.outputs.version }}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
