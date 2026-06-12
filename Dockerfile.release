@@ -109,7 +109,7 @@ RUN apt-get update -y \
     wget locales tzdata \
     # Vulkan libraries
     libvulkan1 vulkan-tools \
-    # Winetricksでダウンロードしてきたfontのアーカイブを展開するために必要
+    # Needed to extract font archives downloaded by winetricks
     xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
@@ -117,7 +117,7 @@ RUN apt-get update -y \
     && chmod +x /usr/bin/winetricks
 RUN locale-gen ja_JP.UTF-8
 
-# 映像・音声の再生に必要なGStreamer
+# GStreamer plugins for video/audio playback
 RUN apt-get update -y \
     && apt-get install -y gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
     && apt-get clean \

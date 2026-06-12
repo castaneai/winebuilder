@@ -1,9 +1,6 @@
 name: Build Wine image
 
 on:
-  push:
-    tags:
-      - 'wine-*'
   workflow_dispatch:
     inputs:
       wine_version:
@@ -29,21 +26,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      # 入力値を直接シェルへ展開せず env 経由で受けることでコマンドインジェクションを避ける
-      INPUT_WINE_VERSION: ${{ inputs.wine_version }}
     steps:
       - uses: actions/checkout@v6
-      - name: Resolve Wine version
-        id: wine
-        # tag push の場合は GITHUB_REF から "wine-11.10" → "11.10" を取り出す。
-        # workflow_dispatch の場合は inputs.wine_version を使う。
-        run: |
-          if [ -n "${INPUT_WINE_VERSION}" ]; then
-            echo "version=${INPUT_WINE_VERSION}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "version=${GITHUB_REF##*wine-}" >> "${GITHUB_OUTPUT}"
-          fi
       - name: Prepare platform slug
         run: |
           platform="${{ matrix.platform }}"
@@ -55,14 +39,15 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # ccache ディレクトリを Actions cache に保存し、2回目以降のビルドを高速化する。
-      # BuildKit の cache mount (/root/.ccache) への注入は buildkit-cache-dance が行う。
+      # Persist the ccache directory to Actions cache to speed up rebuilds.
+      # buildkit-cache-dance injects it into the BuildKit cache mount
+      # (/root/.ccache) used by Dockerfile.release.
       - name: Restore ccache
         id: ccache
         uses: actions/cache@v4
         with:
           path: ccache
-          key: ccache-${{ env.PLATFORM_PAIR }}-${{ steps.wine.outputs.version }}
+          key: ccache-${{ env.PLATFORM_PAIR }}-${{ inputs.wine_version }}
           restore-keys: |
             ccache-${{ env.PLATFORM_PAIR }}-
       - name: Inject ccache into BuildKit
@@ -81,8 +66,9 @@ jobs:
           file: Dockerfile.release
           platforms: ${{ matrix.platform }}
           build-args: |
-            WINE_VERSION=${{ steps.wine.outputs.version }}
-          # レイヤーキャッシュは Actions cache の容量制限 (10GB) を避けて registry に保存する
+            WINE_VERSION=${{ inputs.wine_version }}
+          # Layer cache goes to the registry instead of Actions cache to
+          # avoid the Actions cache size limit (10GB).
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ env.PLATFORM_PAIR }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ env.PLATFORM_PAIR }},mode=max,image-manifest=true,oci-mediatypes=true
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
@@ -105,16 +91,10 @@ jobs:
     permissions:
       packages: write
     env:
-      INPUT_WINE_VERSION: ${{ inputs.wine_version }}
+      # Pass the input via env instead of interpolating it into the shell
+      # script directly, to avoid command injection.
+      WINE_VERSION: ${{ inputs.wine_version }}
     steps:
-      - name: Resolve Wine version
-        id: wine
-        run: |
-          if [ -n "${INPUT_WINE_VERSION}" ]; then
-            echo "version=${INPUT_WINE_VERSION}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "version=${GITHUB_REF##*wine-}" >> "${GITHUB_OUTPUT}"
-          fi
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -132,18 +112,17 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           IMAGE="${REGISTRY}/${IMAGE_NAME}"
-          VERSION="${{ steps.wine.outputs.version }}"
           docker buildx imagetools create \
-            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:${WINE_VERSION}" \
             --tag "${IMAGE}:latest" \
             $(printf "${IMAGE}@sha256:%s " *)
       - name: Inspect image
-        run: docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${{ steps.wine.outputs.version }}"
+        run: docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${WINE_VERSION}"
       - name: Summary
         run: |
           {
             echo 'Image URL'
             echo '```'
-            echo "${REGISTRY}/${IMAGE_NAME}:${{ steps.wine.outputs.version }}"
+            echo "${REGISTRY}/${IMAGE_NAME}:${WINE_VERSION}"
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
