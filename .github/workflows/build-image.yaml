@@ -19,6 +19,10 @@ env:
   # artifact upload.
   DOCKER_BUILD_SUMMARY: false
   DOCKER_BUILD_RECORD_UPLOAD: false
+  # Run JS actions on Node 24. These actions (cache, docker/*) still ship on
+  # Node 20 in their latest majors; GitHub forces Node 24 from 2026-06-16, so
+  # opt in early to surface any incompatibility now.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
