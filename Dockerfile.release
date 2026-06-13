@@ -66,14 +66,21 @@ ENV PATH="/usr/local/ccache-bin:${PATH}"
 
 RUN git clone --depth 1 --branch "wine-${WINE_VERSION}" https://gitlab.winehq.org/wine/wine.git /wine-source
 
+# Probe the injected ccache before building (separate step so it is not lost to
+# BuildKit's 2 MiB per-step log truncation during the long build below).
 RUN --mount=type=cache,target=/root/.ccache \
-    mkdir -p /wine-build \
+    echo "ccache dir size on entry:" && du -sh /root/.ccache 2>/dev/null; ccache -s 2>/dev/null | grep -iE "files in cache|cache size|local storage" || true
+RUN --mount=type=cache,target=/root/.ccache \
+    ccache -z \
+    && mkdir -p /wine-build \
     && cd /wine-build \
     && if [ "$TARGETARCH" = "arm64" ]; then ARCHS=i386,x86_64,arm64ec,aarch64; else ARCHS=x86_64,i386; fi \
     && /wine-source/configure --enable-archs=${ARCHS} \
     && make -j"$(nproc)" \
-    && make install \
-    && ccache -s
+    && make install
+# Report ccache effectiveness in a separate step so the stats survive the
+# 2 MiB log truncation.
+RUN --mount=type=cache,target=/root/.ccache ccache -s
 
 # Strip debug info from PE modules to reduce image size
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
